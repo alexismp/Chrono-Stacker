@@ -9,7 +9,6 @@ import { Header } from './components/Header';
 import { UploadZone } from './components/UploadZone';
 import { ImageList } from './components/ImageList';
 import { ResultPreview } from './components/ResultPreview';
-import { LogoGenerator } from './components/LogoGenerator';
 
 export default function App() {
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -88,7 +87,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans">
       <Toaster position="top-center" />
-      <LogoGenerator />
       
       <Header 
         hasImages={images.length > 0} 

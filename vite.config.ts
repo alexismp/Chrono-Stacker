@@ -1,7 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import fs from 'fs';
 import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
@@ -9,31 +8,7 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [
       react(), 
-      tailwindcss(),
-      {
-        name: 'save-logo',
-        configureServer(server) {
-          server.middlewares.use('/api/save-logo', (req, res) => {
-            let body = '';
-            req.on('data', chunk => body += chunk);
-            req.on('end', () => {
-              try {
-                const { logoBase64 } = JSON.parse(body);
-                const buffer = Buffer.from(logoBase64, 'base64');
-                if (!fs.existsSync('public')) {
-                  fs.mkdirSync('public');
-                }
-                fs.writeFileSync('public/logo.png', buffer);
-                fs.writeFileSync('public/favicon.png', buffer);
-                res.end(JSON.stringify({ success: true }));
-              } catch (e) {
-                res.statusCode = 500;
-                res.end(JSON.stringify({ error: String(e) }));
-              }
-            });
-          });
-        }
-      }
+      tailwindcss()
     ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

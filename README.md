@@ -1,6 +1,6 @@
 # ChronoStacker
 
-ChronoStacker is a web application that takes multiple pictures as input and creates a single vertical image by placing them in chronological order. It is perfect for creating timelines, progress pictures, or sequential photo strips.
+ChronoStacker is a web application that takes multiple pictures as input and creates one or more pages by placing them in chronological order. It is perfect for creating timelines, progress pictures, or sequential photo strips.
 
 ## Features
 
@@ -9,6 +9,7 @@ ChronoStacker is a web application that takes multiple pictures as input and cre
 * **Smart Stacking:** The resulting image's width is defined by the widest picture provided, with smaller pictures left-justified.
 * **Smart Chunking:** Automatically splits the resulting image into multiple parts if the total height exceeds 1.5 times the maximum width, ensuring optimal viewing and preventing browser canvas limits.
 * **PDF Export:** Download the generated chronological stack as a single, multi-page PDF document, where each page perfectly matches the dimensions of the generated image chunks.
+* **AI Logo Generation:** Automatically generates a sleek, modern app logo and favicon on first load using the Gemini 2.5 Flash Image model.
 * **Privacy First:** All processing happens directly in the browser. No images are ever uploaded to a server.
 
 ## Architecture
@@ -19,6 +20,8 @@ This application is built as a Client-Side Single Page Application (SPA) with th
 * **Build Tool:** Vite for fast, modern web development.
 * **Styling:** Tailwind CSS (v4) for responsive, utility-first styling.
 * **Image Processing:** Native HTML5 `<canvas>` API for image stitching and rendering.
+* **AI Integration:** `@google/genai` SDK for generating the app's logo using the `gemini-2.5-flash-image` model.
+* **Custom Vite Plugin:** A custom development server middleware (`save-logo`) that permanently saves the generated logo to the `public/` directory.
 * **PDF Generation:** `jspdf` library for creating multi-page PDF documents directly on the client.
 * **Metadata Extraction:** `exifr` library for fast and robust EXIF data parsing directly in the browser.
 * **Icons:** `lucide-react` for clean, consistent SVG icons.
@@ -34,8 +37,12 @@ To run this application locally:
    ```bash
    npm install
    ```
-3. Start the development server:
+3. Set up your environment variables by creating a `.env` file in the root directory and adding your Gemini API key (required for the initial logo generation):
+   ```env
+   GEMINI_API_KEY=your_api_key_here
+   ```
+4. Start the development server:
    ```bash
    npm run dev
    ```
-4. Open your browser to the URL provided in the terminal (usually `http://localhost:3000`).
+5. Open your browser to the URL provided in the terminal (usually `http://localhost:3000`).

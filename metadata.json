@@ -1,5 +1,5 @@
 {
   "name": "ChronoStacker",
-  "description": "A webapp that takes multiple pictures and creates a single vertical image by placing them in chronological order.",
+  "description": "A webapp that chronologicaly stacks multiple pictures into pages.",
   "requestFramePermissions": []
 }

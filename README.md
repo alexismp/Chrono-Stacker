@@ -1,5 +1,7 @@
 # ChronoStacker
 
+<img src="public/logo.png" width="120" height="120" align="right" alt="ChronoStacker Logo" />
+
 ChronoStacker is a web application that takes multiple pictures as input and creates one or more pages by placing them in chronological order. It is perfect for creating timelines, progress pictures, or sequential photo strips.
 
 ## Features
@@ -18,10 +20,9 @@ This application is built as a Client-Side Single Page Application (SPA) with th
 * **Frontend Framework:** React 19 with TypeScript.
 * **Build Tool:** Vite for fast, modern web development.
 * **Styling:** Tailwind CSS (v4) for responsive, utility-first styling.
-* **Image Processing:** Native HTML5 `<canvas>` API for image stitching and rendering.
+* **Image Processing:** Native `<canvas>` API for image stitching and rendering.
 * **PDF Generation:** `jspdf` library for creating multi-page PDF documents directly on the client.
 * **Metadata Extraction:** `exifr` library for fast and robust EXIF data parsing directly in the browser.
-* **Icons:** `lucide-react` for clean, consistent SVG icons.
 
 Because this application relies entirely on client-side processing, it is highly performant and respects user privacy. The browser's memory and canvas size limits dictate the maximum processing capabilities, which is why the application implements automatic chunking for very tall image stacks.
 

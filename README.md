@@ -1,6 +1,6 @@
 # ChronoStacker
 
-<img src="public/logo.png" width="120" height="120" align="right" alt="ChronoStacker Logo" />
+<img src="public/logo.svg" width="120" height="120" align="right" alt="ChronoStacker Logo" />
 
 ChronoStacker is a web application that takes multiple pictures as input and creates one or more pages by placing them in chronological order. It is perfect for creating timelines, progress pictures, or sequential photo strips.
 

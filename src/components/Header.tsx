@@ -17,7 +17,7 @@ export function Header({ hasImages, isGenerating, onClearAll, onGenerate }: Head
         <div className="flex items-center gap-4">
           {!logoError && (
             <img 
-              src="/logo.png" 
+              src="/logo.svg" 
               alt="ChronoStacker Logo" 
               className="w-12 h-12 rounded-xl shadow-sm object-cover bg-neutral-100"
               onError={() => setLogoError(true)}

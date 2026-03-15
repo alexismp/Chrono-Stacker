@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Upload, Image as ImageIcon, Download, Trash2, RefreshCw } from 'lucide-react';
+import { Upload, Image as ImageIcon, Download, Trash2, RefreshCw, FileText } from 'lucide-react';
 import exifr from 'exifr';
+import { jsPDF } from 'jspdf';
 
 interface ImageFile {
   id: string;
@@ -44,7 +45,8 @@ export default function App() {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [resultImages, setResultImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFiles = async (files: File[]) => {
@@ -134,13 +136,13 @@ export default function App() {
       }
       return newImages;
     });
-    setResultImage(null);
+    setResultImages([]);
   };
 
   const clearAll = () => {
     images.forEach(img => URL.revokeObjectURL(img.url));
     setImages([]);
-    setResultImage(null);
+    setResultImages([]);
   };
 
   const generateImage = async () => {
@@ -151,31 +153,57 @@ export default function App() {
       // Images are already sorted in state, but let's be sure
       const sortedImages = [...images].sort((a, b) => a.timestamp - b.timestamp);
       
-      const maxWidth = Math.max(...sortedImages.map(img => img.width));
-      const totalHeight = sortedImages.reduce((sum, img) => sum + img.height, 0);
+      const globalMaxWidth = Math.max(...sortedImages.map(img => img.width));
       
-      const canvas = document.createElement('canvas');
-      canvas.width = maxWidth;
-      canvas.height = totalHeight;
-      const ctx = canvas.getContext('2d');
+      // Limit the height of the resulting pages to 1.5 the largest width
+      const MAX_CANVAS_HEIGHT = globalMaxWidth * 1.5;
       
-      if (!ctx) {
-        throw new Error("Could not get canvas context");
+      const chunks: { images: ImageFile[], height: number }[] = [];
+      let currentChunkImages: ImageFile[] = [];
+      let currentHeight = 0;
+      
+      for (const img of sortedImages) {
+        // If adding this image exceeds the max height, and we already have images in the chunk, start a new chunk
+        if (currentHeight + img.height > MAX_CANVAS_HEIGHT && currentChunkImages.length > 0) {
+          chunks.push({ images: currentChunkImages, height: currentHeight });
+          currentChunkImages = [img];
+          currentHeight = img.height;
+        } else {
+          currentChunkImages.push(img);
+          currentHeight += img.height;
+        }
+      }
+      if (currentChunkImages.length > 0) {
+        chunks.push({ images: currentChunkImages, height: currentHeight });
       }
       
-      // Fill background with white or transparent (transparent is default)
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const generatedUrls: string[] = [];
       
-      let currentY = 0;
-      for (const imgData of sortedImages) {
-        const img = await loadImage(imgData.url);
-        ctx.drawImage(img, 0, currentY, imgData.width, imgData.height);
-        currentY += imgData.height;
+      for (const chunk of chunks) {
+        const canvas = document.createElement('canvas');
+        canvas.width = globalMaxWidth;
+        canvas.height = chunk.height;
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          throw new Error("Could not get canvas context");
+        }
+        
+        // Fill background with white
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        let currentY = 0;
+        for (const imgData of chunk.images) {
+          const img = await loadImage(imgData.url);
+          ctx.drawImage(img, 0, currentY, imgData.width, imgData.height);
+          currentY += imgData.height;
+        }
+        
+        generatedUrls.push(canvas.toDataURL('image/png'));
       }
       
-      const dataUrl = canvas.toDataURL('image/png');
-      setResultImage(dataUrl);
+      setResultImages(generatedUrls);
     } catch (error) {
       console.error("Error generating image:", error);
       alert("An error occurred while generating the image.");
@@ -184,14 +212,59 @@ export default function App() {
     }
   };
 
-  const downloadImage = () => {
-    if (!resultImage) return;
-    const a = document.createElement('a');
-    a.href = resultImage;
-    a.download = `chronological-stack-${new Date().getTime()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const downloadImages = () => {
+    if (resultImages.length === 0) return;
+    
+    resultImages.forEach((url, index) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = url;
+        const suffix = resultImages.length > 1 ? `-part${index + 1}` : '';
+        a.download = `chronological-stack-${new Date().getTime()}${suffix}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, index * 300); // Stagger downloads slightly
+    });
+  };
+
+  const downloadPDF = async () => {
+    if (resultImages.length === 0) return;
+    
+    setIsDownloadingPdf(true);
+    try {
+      let pdf: jsPDF | null = null;
+      
+      for (let i = 0; i < resultImages.length; i++) {
+        const imgUrl = resultImages[i];
+        const img = await loadImage(imgUrl);
+        
+        const width = img.width;
+        const height = img.height;
+        const orientation = width > height ? 'l' : 'p';
+        
+        if (!pdf) {
+          pdf = new jsPDF({
+            orientation: orientation,
+            unit: 'px',
+            format: [width, height]
+          });
+          pdf.addImage(imgUrl, 'PNG', 0, 0, width, height);
+        } else {
+          pdf.addPage([width, height], orientation);
+          pdf.addImage(imgUrl, 'PNG', 0, 0, width, height);
+        }
+      }
+      
+      if (pdf) {
+        pdf.save(`chronological-stack-${new Date().getTime()}.pdf`);
+      }
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("An error occurred while generating the PDF.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   return (
@@ -303,14 +376,24 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-neutral-200 p-6 min-h-[400px] flex flex-col">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-medium text-neutral-800">Result Preview</h2>
-                {resultImage && (
-                  <button
-                    onClick={downloadImage}
-                    className="px-4 py-2 text-sm font-medium text-neutral-900 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </button>
+                {resultImages.length > 0 && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={downloadPDF}
+                      disabled={isDownloadingPdf}
+                      className="px-4 py-2 text-sm font-medium text-neutral-900 bg-white border border-neutral-200 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                      {isDownloadingPdf ? <RefreshCw className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                      Download PDF
+                    </button>
+                    <button
+                      onClick={downloadImages}
+                      className="px-4 py-2 text-sm font-medium text-neutral-900 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      {resultImages.length > 1 ? 'Download Images' : 'Download Image'}
+                    </button>
+                  </div>
                 )}
               </div>
               
@@ -320,13 +403,22 @@ export default function App() {
                     <RefreshCw className="w-8 h-8 animate-spin mb-3" />
                     <p className="text-sm font-medium">Stitching images together...</p>
                   </div>
-                ) : resultImage ? (
-                  <div className="absolute inset-0 overflow-auto p-4 flex justify-center custom-scrollbar">
-                    <img 
-                      src={resultImage} 
-                      alt="Generated chronological stack" 
-                      className="max-w-full h-auto object-contain shadow-md border border-neutral-200 bg-white"
-                    />
+                ) : resultImages.length > 0 ? (
+                  <div className="absolute inset-0 overflow-auto p-4 flex flex-col items-center gap-6 custom-scrollbar">
+                    {resultImages.map((src, idx) => (
+                      <div key={idx} className="relative group w-full flex justify-center">
+                        {resultImages.length > 1 && (
+                          <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                            Part {idx + 1}
+                          </div>
+                        )}
+                        <img 
+                          src={src} 
+                          alt={`Generated chronological stack part ${idx + 1}`} 
+                          className="max-w-full h-auto object-contain shadow-md border border-neutral-200 bg-white"
+                        />
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center text-neutral-400 p-8 text-center">
